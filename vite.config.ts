@@ -3,6 +3,10 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath } from 'node:url';
+import { execSync } from 'node:child_process';
+
+const commit = (() => { try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'dev'; } })();
+const built = new Date().toLocaleString('hu-HU', { timeZone: 'Europe/Budapest', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 // Két változat: helyi (egy HTML fájl, offline, nincs szinkron) és webes (PWA, közös kassza, GitHub Pages).
 const web = process.env.VITE_TARGET === 'web';
@@ -10,6 +14,7 @@ const fake = process.env.VITE_FAKE === '1'; // teszthez: a Firebase helyett hely
 const r = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(`${built} · ${commit}`) },
   base: web ? (process.env.VITE_BASE ?? '/csaladi-kassza/') : './',
   plugins: [
     svelte(),

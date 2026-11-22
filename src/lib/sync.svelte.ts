@@ -19,6 +19,10 @@ class Sync {
   unlocked = $state(false);
   error = $state('');
   lastSync = $state<string>('');
+  /** hibakereséshez */
+  remoteCount = $state(0);
+  pendingCount = $state(0);
+  get shortId() { return this.id.slice(0, 8); }
 
   private secret = '';
   private id = '';
@@ -132,6 +136,7 @@ class Sync {
   }
 
   private publish() {
+    this.remoteCount = this.remote.length; this.pendingCount = this.pending.length;
     this.setLog([...this.remote, ...this.pending]);
     void this.writeCache();
   }

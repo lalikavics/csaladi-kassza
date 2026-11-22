@@ -22,6 +22,16 @@
   // a nevek, a pénznem és az alapfelosztás közösek: eseményként mennek, hogy a másik félnél is átíródjanak
   const saveMeta = () => app.setMeta({ nameA: s.nameA.trim(), nameB: s.nameB.trim(), currency: s.currency, shareA: Math.round(pctA * 100) });
   let copied = $state('');
+  const BUILD = __BUILD__;
+  let diagMsg = $state('');
+  // csak technikai adatok: összegek, nevek, tételszövegek és a kassza titka nem kerülnek bele
+  async function copyDiag() {
+    const d = { build: BUILD, mode: app.shared ? 'web' : 'local', events: app.log.length, items: app.state.items.size, rules: app.state.rules.size,
+      kassa: app.shared ? sync.shortId : null, remote: sync.remoteCount, pending: sync.pendingCount, status: sync.status, lastSync: sync.lastSync, error: sync.error,
+      rejected: app.state.rejected.slice(-10).map((r) => ({ t: r.event.t, at: r.event.at, reason: r.reason })), ua: navigator.userAgent };
+    try { await navigator.clipboard.writeText(JSON.stringify(d, null, 1)); diagMsg = hu ? 'Másolva: ezt küldd el nekem, ha hibát látsz.' : 'Copied.'; }
+    catch { diagMsg = JSON.stringify(d); }
+  }
   async function copyInvite() {
     try { await navigator.clipboard.writeText(sync.inviteLink()); copied = hu ? 'Link másolva.' : 'Link copied.'; }
     catch { copied = sync.inviteLink(); }
@@ -192,6 +202,22 @@
 </div>
 
 {#if !app.shared}<div class="card small">{app.t('soon')}</div>{/if}
+
+<details class="card small">
+  <summary style="cursor:pointer;font-weight:600;color:var(--ink)">{hu ? 'Hibakeresés' : 'Debug'}</summary>
+  <div style="display:flex;flex-direction:column;gap:4px;margin-top:8px;font-variant-numeric:tabular-nums">
+    <span>{hu ? 'Verzió' : 'Version'}: {BUILD} · {app.shared ? (hu ? 'közös (webes)' : 'shared (web)') : (hu ? 'helyi' : 'local')}</span>
+    <span>{hu ? 'Események' : 'Events'}: {app.log.length} · {hu ? 'tételek' : 'items'}: {app.state.items.size} · {hu ? 'ismétlődő' : 'rules'}: {app.state.rules.size}</span>
+    {#if app.shared}
+      <span>{hu ? 'Kassza' : 'Kitty'}: {sync.shortId}… · {hu ? 'szerveren' : 'on server'}: {sync.remoteCount} · {hu ? 'feltöltésre vár' : 'pending'}: {sync.pendingCount} · {sync.status}{sync.lastSync ? ` · ${sync.lastSync}` : ''}</span>
+    {/if}
+    <span>{hu ? 'Elutasított események' : 'Rejected events'}: {app.state.rejected.length}</span>
+    {#each app.state.rejected.slice(-5) as r}<span>· {r.event.t} ({r.event.at.slice(0, 16).replace('T', ' ')}): {r.reason}</span>{/each}
+    <span>{hu ? 'Ezen az eszközön' : 'This device'}: {app.name(app.settings.me)} · {navigator.userAgent.includes('iPhone') ? 'iPhone' : navigator.userAgent.includes('Android') ? 'Android' : navigator.userAgent.includes('Windows') ? 'Windows' : 'egyéb'}{matchMedia('(display-mode: standalone)').matches ? ' · app' : ' · böngésző'}</span>
+    <button class="btn ghost" style="margin-top:6px" onclick={copyDiag}>{hu ? 'Hibakereső adatok másolása' : 'Copy debug info'}</button>
+    {#if diagMsg}<span>{diagMsg}</span>{/if}
+  </div>
+</details>
 
 {#if confirmReset}
   <div class="warn">{app.shared ? (hu ? 'Ezen az eszközön törlődik a kassza elérése és a helyi másolat. A közös adat megmarad, a meghívó linkkel és a PIN-nel újra beléphetsz.' : 'This removes access on this device only.') : app.t('resetConfirm')}</div>

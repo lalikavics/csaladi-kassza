@@ -29,7 +29,7 @@
 </script>
 
 <div class="head">
-  <div><div class="small">{monthLabel(thisMonth, app.lang)} · <span class="badge">{app.t('testBuild')}</span></div><h1>{app.t('overview')}</h1></div>
+  <div><div class="small">{monthLabel(thisMonth, app.lang)} · <span class="badge" title={__BUILD__}>{app.shared ? (app.lang === 'hu' ? 'Közös' : 'Shared') : (app.lang === 'hu' ? 'Helyi' : 'Local')}</span></div><h1>{app.t('overview')}</h1></div>
 </div>
 
 {#if due.length}
