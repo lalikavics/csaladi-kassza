@@ -1,0 +1,21 @@
+rules_version = '2';
+// Családi kassza: a szerver csak titkosított adatot tárol. Bejelentkezés nincs, a hozzáférés kulcsa a kassza
+// azonosítója, amit csak a meghívó link birtokában lehet kiszámolni. Létrehozni lehet, módosítani és törölni nem.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /k/{kid} {
+      allow get: if kid.size() == 40;
+      allow create: if kid.size() == 40
+        && request.resource.data.keys().hasOnly(['v', 'at'])
+        && request.resource.data.at == request.time;
+      match /e/{eid} {
+        allow read: if kid.size() == 40;
+        allow create: if exists(/databases/$(database)/documents/k/$(kid))
+          && request.resource.data.keys().hasOnly(['iv', 'c', 't'])
+          && request.resource.data.t == request.time
+          && request.resource.data.c is string
+          && request.resource.data.c.size() < 60000;
+      }
+    }
+  }
+}

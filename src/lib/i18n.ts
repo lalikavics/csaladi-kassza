@@ -1,0 +1,101 @@
+// Nyelvi fájlok. Új nyelv: egy új objektum ugyanazokkal a kulcsokkal.
+const hu = {
+  appName: 'Családi kassza',
+  testBuild: 'Tesztváltozat',
+  overview: 'Áttekintés', items: 'Tételek', add: 'Új tétel', report: 'Kimutatás', settings: 'Beállítások',
+  balance: 'Jelenlegi egyenleg', owes: '{x} tartozik: {amt}', toWhom: 'javára: {y}', even: 'Kvittek vagytok',
+  recordSettlement: 'Rendezés rögzítése', individualMonth: '{x} egyéni (hó)', hidden: 'rejtett',
+  kinds: { shared: 'Közös költés', transfer: 'Pénzadás', settlement: 'Rendezés', individual: 'Egyéni költés', opening: 'Nyitóegyenleg' },
+  amount: 'Összeg', whoPaid: 'Ki fizette?', whoGave: 'Ki adta?', creditor: 'Ki a hitelező?', what: 'Mire?', date: 'Dátum',
+  split: 'Felosztás', splitHint: '{a}: {pa}% · {b}: {pb}%', otherCurrency: 'Más pénznem (utazás)', currency: 'Pénznem',
+  origAmount: 'Összeg az eredeti pénznemben', rate: 'Árfolyam (1 {c} = ? {base})', converted: 'Átszámítva: {amt}',
+  rateManual: 'Az automatikus árfolyam a végleges, saját címen futó változatban jön; most kézzel add meg.',
+  save: 'Mentés', cancel: 'Mégse', delete: 'Törlés', edit: 'Szerkesztés', back: 'Vissza', next: 'Tovább', skip: 'Kihagyom',
+  all: 'Mind', empty: 'Még nincs tétel ebben a hónapban.', noItems: 'Még nincs tétel.',
+  monthReport: 'Havi kimutatás', opening: 'Nyitóegyenleg', sharedEffect: 'Közös költések hatása', transfers: 'Pénzadások',
+  settlements: 'Rendezések', closing: 'Záróegyenleg', closeApproval: 'Lezárás jóváhagyása', approved: 'Jóváhagyta',
+  notYet: 'Még nem', approve: 'Jóváhagyom a lezárást', withdraw: 'Jóváhagyás visszavonása', closed: 'Lezárva',
+  reopen: 'Közös újranyitás kérése', reopenWait: 'Újranyitást kért: {x}', closeNote: 'Csak a közös tételekre vonatkozik. Lezárás után javítás korrekciós tétellel vagy közös újranyitással.',
+  lockedMonth: 'Ez a hónap lezárva. Vegyél fel korrekciós tételt, vagy nyissátok újra közösen.',
+  closeHint: 'Lezárható: {m}', closeHintSub: '{x} már jóváhagyta.',
+  welcome: 'Üdv! Ezt tudja az app', welcomeSub: 'Az alap verzió ingyenes és hirdetésmentes. A prémiumot bármikor felvehetitek.',
+  basic: 'Alap', free: 'Ingyenes', premium: 'Prémium', oneTime: 'Egyszeri díj, [ár később]', subOnly: 'Előfizetéssel: tételes, AI-s blokkfelismerés.',
+  basicList: ['Közös kassza két félnek, egyenleg valós időben', 'Közös költés, pénzadás, rendezés, egyéni költés', 'Állítható felosztás, több pénznem, utazási árfolyam', 'Ismétlődő tételek, tartozási határidő, változásnapló', 'Havi lezárás közös jóváhagyással', 'Végponttól végpontig titkosítás, offline működés, nincs hirdetés'],
+  premiumList: ['Több főkönyv: tartozáslista barátoknak, családnak', 'Haladó kimutatások és export, költségvetés', 'Bevétel és megtakarítás követése', 'Blokkfelismerés az eszközön (összeg, dátum)', 'Fotócsatolás, automatikus felhős mentés'],
+  startBasic: 'Indulás az alap verzióval',
+  setupTitle: 'Állítsuk be a kasszátokat', setupSub: 'Két személy, egy közös főkönyv. Mindent később is átírhattok.',
+  yourName: 'A te neved', otherName: 'A másik fél neve', baseCurrency: 'A kassza alap pénzneme',
+  splitTitle: 'Felosztás és láthatóság', defaultSplit: 'Közös tételek alapfelosztása', visibility: 'Mit lásson a másik fél az egyéni költéseidből?',
+  vis: { private: 'Semmit', total: 'Csak a havi összeget', items: 'Minden tételt' },
+  visSub: { private: 'Teljesen privát, csak te látod.', total: 'Egy szám havonta, tételek nélkül.', items: 'Teljes átláthatóság.' },
+  debtTitle: 'Van már köztetek tartozás?', debtSub: 'Ha igen, nyitóegyenlegként rögzítjük. Kihagyhatod, és a régi táblázat is importálható.',
+  owesTo: '{x} tartozik → {y}', note: 'Megjegyzés (opcionális)', finish: 'Kész',
+  importTitle: 'Importálás a régi táblázatból', importSub: 'Az .xlsx fájl csak ebben a böngészőben dolgozódik fel, nem kerül fel sehova.',
+  importPick: 'Táblázat kiválasztása', importOk: '{n} hónap, {i} tétel. Mind a {n} hónap záró egyenlege egyezik a táblázattal.',
+  importBad: 'Figyelem: {b} hónapnál eltér az egyenleg. Az import nem történt meg.', importReplace: 'Az import lecseréli a jelenlegi tételeket. Biztos?',
+  importDo: 'Importálás', importWarn: 'Megjegyzések az importhoz',
+  me: 'Ezen az eszközön ki vagyok?', meHint: 'Teszteléshez: a szinkron még nincs kész, így egy telefonon mindkét fél nevében jóváhagyhatsz.',
+  language: 'Nyelv', langAuto: 'Telefon nyelve',
+  log: 'Változásnapló', backup: 'Biztonsági mentés', backupCopy: 'Mentés másolása', backupCopied: 'Vágólapra másolva.',
+  backupRestore: 'Visszaállítás beillesztett mentésből', restore: 'Visszaállítás', restoreBad: 'Nem érvényes mentés.',
+  reset: 'Minden adat törlése ezen az eszközön', resetConfirm: 'Biztosan törölsz mindent? Ez nem vonható vissza.',
+  storageWarn: 'Tesztváltozat: az adat csak ebben a böngészőben van. Rendszeresen másold ki a mentést.',
+  soon: 'Hamarosan: titkosított szinkron a két telefon között, meghívó QR-kód, helyreállítási kulcs, ismétlődő tételek.',
+  logAdd: 'felvette', logEdit: 'módosította', logDelete: 'törölte', logApprove: 'jóváhagyta a lezárást', logReopen: 'újranyitást kért',
+  sure: 'Biztos?', yes: 'Igen', no: 'Nem',
+};
+type Dict = typeof hu;
+
+const en: Dict = {
+  ...hu,
+  appName: 'Family kitty', testBuild: 'Test build',
+  overview: 'Overview', items: 'Items', add: 'New item', report: 'Report', settings: 'Settings',
+  balance: 'Current balance', owes: '{x} owes: {amt}', toWhom: 'to {y}', even: 'You are even',
+  recordSettlement: 'Record a settlement', individualMonth: '{x} personal (month)', hidden: 'hidden',
+  kinds: { shared: 'Shared expense', transfer: 'Money given', settlement: 'Settlement', individual: 'Personal expense', opening: 'Opening balance' },
+  amount: 'Amount', whoPaid: 'Who paid?', whoGave: 'Who gave?', creditor: 'Who is owed?', what: 'What for?', date: 'Date',
+  split: 'Split', otherCurrency: 'Other currency (travel)', currency: 'Currency', origAmount: 'Amount in original currency',
+  rate: 'Rate (1 {c} = ? {base})', converted: 'Converted: {amt}', rateManual: 'Automatic rates come with the hosted version; enter it manually for now.',
+  save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', back: 'Back', next: 'Next', skip: 'Skip',
+  all: 'All', empty: 'No items this month yet.', noItems: 'No items yet.',
+  monthReport: 'Monthly report', opening: 'Opening balance', sharedEffect: 'Shared expenses', transfers: 'Money given',
+  settlements: 'Settlements', closing: 'Closing balance', closeApproval: 'Closing approval', approved: 'Approved', notYet: 'Not yet',
+  approve: 'Approve closing', withdraw: 'Withdraw approval', closed: 'Closed', reopen: 'Request joint reopening', reopenWait: 'Reopen requested by: {x}',
+  closeNote: 'Applies to shared items only. After closing, fix with a correction item or a joint reopening.',
+  lockedMonth: 'This month is closed. Add a correction item, or reopen it together.', closeHint: 'Ready to close: {m}', closeHintSub: '{x} has approved.',
+  welcome: 'Welcome! Here is what the app does', welcomeSub: 'The basic version is free and ad-free. Premium can be added any time.',
+  basic: 'Basic', free: 'Free', premium: 'Premium', oneTime: 'One-time fee, [price later]', subOnly: 'With subscription: itemised AI receipt scanning.',
+  basicList: ['Shared kitty for two, live balance', 'Shared expense, money given, settlement, personal expense', 'Adjustable split, multiple currencies, travel rates', 'Recurring items, loan deadlines, change log', 'Monthly closing approved by both', 'End-to-end encryption, works offline, no ads'],
+  premiumList: ['More ledgers: debts with friends and family', 'Advanced reports and export, budgets', 'Income and savings tracking', 'On-device receipt scanning (amount, date)', 'Photo attachments, automatic cloud backup'],
+  startBasic: 'Start with basic', setupTitle: 'Set up your kitty', setupSub: 'Two people, one shared ledger. Everything can be changed later.',
+  yourName: 'Your name', otherName: "The other person's name", baseCurrency: 'Base currency of the kitty',
+  splitTitle: 'Split and visibility', defaultSplit: 'Default split for shared items', visibility: 'What may the other person see of your personal spending?',
+  vis: { private: 'Nothing', total: 'Monthly total only', items: 'Every item' },
+  visSub: { private: 'Fully private, only you see it.', total: 'One number a month, no items.', items: 'Full transparency.' },
+  debtTitle: 'Is there already a debt between you?', debtSub: 'If so, it becomes the opening balance. You can skip this, and the old sheet can be imported.',
+  owesTo: '{x} owes {y}', note: 'Note (optional)', finish: 'Done',
+  importTitle: 'Import the old spreadsheet', importSub: 'The .xlsx file is processed in this browser only and is not uploaded anywhere.',
+  importPick: 'Choose spreadsheet', importOk: '{n} months, {i} items. All {n} closing balances match the spreadsheet.',
+  importBad: 'Warning: the balance differs in {b} months. Nothing was imported.', importReplace: 'Importing replaces the current items. Continue?',
+  importDo: 'Import', importWarn: 'Import notes',
+  me: 'Who am I on this device?', meHint: 'For testing: sync is not ready yet, so you can approve for both people on one phone.',
+  language: 'Language', langAuto: 'Phone language', log: 'Change log', backup: 'Backup', backupCopy: 'Copy backup', backupCopied: 'Copied to clipboard.',
+  backupRestore: 'Restore from a pasted backup', restore: 'Restore', restoreBad: 'Not a valid backup.',
+  reset: 'Delete all data on this device', resetConfirm: 'Delete everything? This cannot be undone.',
+  storageWarn: 'Test build: data lives in this browser only. Copy the backup regularly.',
+  soon: 'Coming: encrypted sync between the two phones, invite QR code, recovery key, recurring items.',
+  logAdd: 'added', logEdit: 'edited', logDelete: 'deleted', logApprove: 'approved closing', logReopen: 'requested reopening',
+  sure: 'Sure?', yes: 'Yes', no: 'No',
+};
+
+export const dicts = { hu, en } as const;
+export type Lang = keyof typeof dicts;
+
+export function detectLang(): Lang {
+  const l = (typeof navigator !== 'undefined' ? navigator.language : 'hu').slice(0, 2);
+  return (l in dicts ? l : 'en') as Lang;
+}
+
+export function fill(s: string, v: Record<string, string | number> = {}) {
+  return s.replace(/\{(\w+)\}/g, (_, k) => String(v[k] ?? ''));
+}
