@@ -2,7 +2,9 @@
 import http from 'node:http';
 const db = new Map(); let ts = 0;
 const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }); res.end(JSON.stringify(body)); };
-const put = (path, data) => { if (db.has(path)) return false; db.set(path, { ...data, ...(data.t === '__ts__' ? { t: ++ts } : {}), ...(data.at === '__ts__' ? { at: ++ts } : {}) }); return true; };
+const INV = process.env.FAKE_INV;
+const put = (path, data) => { if (db.has(path)) return false;
+  if (INV && /^k\/[^/]+$/.test(path) && data.inv !== INV) return false; db.set(path, { ...data, ...(data.t === '__ts__' ? { t: ++ts } : {}), ...(data.at === '__ts__' ? { at: ++ts } : {}) }); return true; };
 http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') return json(res, 200, {});
   const u = new URL(req.url, 'http://x');

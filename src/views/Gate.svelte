@@ -8,6 +8,7 @@
   let step = $state<Step>(sync.hasSecret ? 'pin' : 'start');
   let pin = $state('');
   let pin2 = $state('');
+  let code = $state('');
   let invite = $state('');
   let backup = $state('');
   let busy = $state(false);
@@ -46,7 +47,7 @@
   async function create() {
     if (!isPin(pin) || pin !== pin2) { error = hu ? 'A két PIN nem egyezik.' : 'PINs do not match.'; return; }
     busy = true; error = '';
-    try { await sync.create(pin); step = 'source'; }
+    try { await sync.create(pin, code); step = 'source'; }
     catch (e) { error = (e as Error).message; }
     finally { busy = false; }
   }
@@ -78,9 +79,11 @@
   {:else if step === 'newpin'}
     <h1>{hu ? 'Válassz PIN-t' : 'Choose a PIN'}</h1>
     <p class="sub">{hu ? '4 számjegy. Ezt kell beírni indításkor, a párodnak is ezt mondd meg (ne a linkkel együtt küldd).' : '4 digits, entered at each start. Tell it to your partner separately from the link.'}</p>
+    <label class="f">{hu ? 'Létrehozási kód' : 'Creation code'}<input class="in" autocomplete="off" autocapitalize="characters" bind:value={code} placeholder="XXXX-XXXX" /></label>
+    <span class="small">{hu ? 'Új kasszát csak ezzel a kóddal lehet nyitni, hogy más ne hozhasson létre a tárhelyeden. Meghívóval csatlakozni nem kell hozzá.' : 'Needed only to create a new kitty; joining with an invite does not need it.'}</span>
     <label class="f">PIN<input class="in pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" bind:value={pin} /></label>
     <label class="f">{hu ? 'PIN még egyszer' : 'PIN again'}<input class="in pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" bind:value={pin2} /></label>
-    <button class="btn" disabled={busy || !isPin(pin) || !isPin(pin2)} onclick={create}>{busy ? '…' : hu ? 'Kassza létrehozása' : 'Create'}</button>
+    <button class="btn" disabled={busy || !isPin(pin) || !isPin(pin2) || code.replace(/[^A-Za-z0-9]/g, '').length < 8} onclick={create}>{busy ? '…' : hu ? 'Kassza létrehozása' : 'Create'}</button>
     <button class="btn link" onclick={() => (step = 'start')}>{app.t('back')}</button>
   {:else if step === 'source'}
     <h1>{hu ? 'Honnan induljon?' : 'Where to start?'}</h1>

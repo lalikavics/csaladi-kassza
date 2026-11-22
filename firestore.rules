@@ -6,8 +6,10 @@ service cloud.firestore {
     match /k/{kid} {
       allow get: if kid.size() == 40;
       allow create: if kid.size() == 40
-        && request.resource.data.keys().hasOnly(['v', 'at'])
-        && request.resource.data.at == request.time;
+        && request.resource.data.keys().hasOnly(['v', 'at', 'inv'])
+        && request.resource.data.at == request.time
+        // új kassza csak a létrehozási kód lenyomatával (a valódi érték csak a Firebase-konzolon van)
+        && request.resource.data.inv == 'LETREHOZASI_KOD_LENYOMATA';
       match /e/{eid} {
         allow read: if kid.size() == 40;
         allow create: if exists(/databases/$(database)/documents/k/$(kid))

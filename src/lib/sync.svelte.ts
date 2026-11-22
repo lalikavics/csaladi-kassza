@@ -5,7 +5,7 @@ import { initializeApp, type FirebaseApp } from 'firebase/app';
 import {
   collection, doc, getDoc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, writeBatch, type Firestore, type Unsubscribe,
 } from 'firebase/firestore';
-import { deriveKey, kassaId, newSecret, open, seal, type Sealed } from './crypto';
+import { createToken, deriveKey, kassaId, newSecret, open, seal, type Sealed } from './crypto';
 import type { Event } from './ledger';
 import { firebaseConfig } from './config';
 
@@ -75,11 +75,16 @@ class Sync {
   }
 
   /** Új közös kassza a megadott PIN-nel. */
-  async create(pin: string) {
+  async create(pin: string, code: string) {
     const secret = newSecret();
     const id = await kassaId(secret);
     const key = await deriveKey(secret, pin, id);
-    await setDoc(doc(this.conn(), 'k', id), { v: await seal(key, 'kassza-ok'), at: serverTimestamp() });
+    try {
+      await setDoc(doc(this.conn(), 'k', id), { v: await seal(key, 'kassza-ok'), at: serverTimestamp(), inv: await createToken(code) });
+    } catch (e) {
+      if (/permission/i.test((e as Error).message)) throw new Error('Hibás létrehozási kód.');
+      throw e;
+    }
     this.useSecret(secret);
     this.id = id; this.key = key;
   }

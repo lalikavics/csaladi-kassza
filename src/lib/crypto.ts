@@ -24,6 +24,13 @@ export async function kassaId(secret: string): Promise<string> {
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 40);
 }
 
+/** Létrehozási kód → a szabályokban ellenőrzött lenyomat (a kód maga nem megy fel). */
+export async function createToken(code: string): Promise<string> {
+  const norm = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const h = await crypto.subtle.digest('SHA-256', enc.encode('kassza-create:' + norm));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 /** Kulcs a titokból és a PIN-ből; a PBKDF2 sok kört számol, hogy a PIN találgatása lassú legyen. */
 export async function deriveKey(secret: string, pin: string, id: string): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey('raw', enc.encode(secret + ':' + pin), 'PBKDF2', false, ['deriveKey']);
