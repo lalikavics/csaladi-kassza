@@ -4,6 +4,7 @@
   import { GROUPS, groupColor, groupOf, guessCategory, leafLabel, suggestions, type Suggestion } from '../lib/categories';
   import { CURRENCIES, money, parseAmount, parseRate, today } from '../lib/format';
   import { normNote } from '../lib/ledger';
+  import { sameAmountInMonth } from '../lib/dateFromNote';
 
   let { edit = null, preset = null, done }: { edit?: Item | null; preset?: Kind | null; done: () => void } = $props();
 
@@ -31,12 +32,17 @@
   let error = $state('');
   let askDelete = $state(false);
   let noteFocus = $state(false);
+  // azonos összegű tétel ugyanabban a hónapban: figyelmeztetés, mentéskor rákérdezés
+  let dupAsked = $state('');
 
   const isExpense = $derived(kind === 'shared' || kind === 'individual');
   const autoCat = $derived(app.state.learned.get(normNote(note)) ?? guessCategory(note));
   const entered = $derived(parseAmount(amountText));
   const rate = $derived(parseRate(rateText));
   const finalAmount = $derived(entered == null ? null : foreign ? (rate ? convert(entered, rate) : null) : entered);
+  const dupes = $derived(finalAmount && !occ ? sameAmountInMonth(app.state.items.values(), date, finalAmount, src?.id) : []);
+  const dupKey = $derived(`${date}|${finalAmount}`);
+  const fmtDate = (d: string) => new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString(app.lang === 'hu' ? 'hu-HU' : 'en-GB', { month: 'short', day: 'numeric' });
   const fromLabel = $derived(isExpense ? app.t('whoPaid') : app.t('whoGave'));
   const hu = $derived(app.lang === 'hu');
   const FREQS: [Freq, string, string][] = [['weekly', 'Heti', 'Weekly'], ['monthly', 'Havi', 'Monthly'], ['quarterly', 'Negyedéves', 'Quarterly'], ['yearly', 'Éves', 'Yearly']];
@@ -63,8 +69,10 @@
     noteFocus = false;
   }
 
-  function save() {
+  function save(force = false) {
     if (!finalAmount || finalAmount <= 0) { error = hu ? 'Add meg az összeget.' : 'Enter an amount.'; return; }
+    const amountChanged = !src || src.amount !== finalAmount || src.date.slice(0, 7) !== date.slice(0, 7);
+    if (!force && amountChanged && !recurring && dupes.length) { dupAsked = dupKey; return; }
     const it: Item = {
       id: src?.id ?? newId(), kind, date, amount: finalAmount, from, note: note.trim(),
       ...(kind === 'shared' ? { shareA: Math.round(pctA * 100) } : {}),
@@ -206,8 +214,23 @@
   </label>
 {/if}
 
-{#if error}<div class="warn" role="alert">{error}</div>{/if}
-<button class="btn" onclick={save}>{app.t('save')}</button>
+{#if dupes.length && dupAsked === dupKey}
+  <div class="card dupcard" role="alertdialog" aria-labelledby="duptitle">
+    <b id="duptitle">{hu ? 'Ebben a hónapban már van ilyen összegű tétel' : 'An item with this amount already exists this month'}</b>
+    {#each dupes as d (d.id)}
+      <div class="row" style="padding:4px 0"><span>{d.note || app.d.kinds[d.kind]} <span class="tip">· {fmtDate(d.date)} · {app.name(d.from)}</span></span><span class="num">{money(d.amount, base, app.lang)}</span></div>
+    {/each}
+    <span class="small">{hu ? 'Ugyanazt a blokkot vinnéd fel másodszor, vagy ez egy másik vásárlás?' : 'Is this the same receipt again, or a different purchase?'}</span>
+    <button class="btn" onclick={() => save(true)}>{hu ? 'Másik tétel, mindenképp rögzítem' : "It's a different item, save it"}</button>
+    <button class="btn ghost" onclick={done}>{hu ? 'Ugyanaz, nem rögzítem' : "It's the same, don't save"}</button>
+  </div>
+{:else}
+  {#if dupes.length && (!src || finalAmount !== src.amount)}
+    <div class="small duphint">⚠ {hu ? 'Ilyen összeg már szerepel ebben a hónapban:' : 'This amount already exists this month:'} {dupes.map((d) => `${d.note || app.d.kinds[d.kind]} (${fmtDate(d.date)})`).join(', ')}</div>
+  {/if}
+  {#if error}<div class="warn" role="alert">{error}</div>{/if}
+  <button class="btn" onclick={() => save()}>{app.t('save')}</button>
+{/if}
 {#if src}
   {#if askDelete}
     <div class="card" style="display:flex;flex-direction:column;gap:8px">
@@ -224,3 +247,8 @@
   {/if}
   <button class="btn link" onclick={done}>{app.t('cancel')}</button>
 {/if}
+
+<style>
+  .dupcard { display: flex; flex-direction: column; gap: 8px; border: 1.5px solid var(--warn-ink); background: var(--warn-bg); }
+  .duphint { color: var(--warn-ink); }
+</style>

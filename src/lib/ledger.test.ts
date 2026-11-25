@@ -140,3 +140,47 @@ describe('ismétlődő tételek', () => {
     expect(normNote('lidl 02.04.')).toBe('lidl');
   });
 });
+
+import { dateFromNote, findDateFixes, sameAmountInMonth } from './dateFromNote';
+
+describe('dátum a megnevezésből', () => {
+  it('hónap.nap formák', () => {
+    expect(dateFromNote('Lidl 9.04', '2026-09-01')?.date).toBe('2026-09-04');
+    expect(dateFromNote('Aldi 9.14.', '2026-09-01')?.date).toBe('2026-09-14');
+    expect(dateFromNote('Tesco 09.4 bevásárlás', '2026-09-01')?.date).toBe('2026-09-04');
+    expect(dateFromNote('Spar 10/2', '2026-10-01')?.date).toBe('2026-10-02');
+  });
+  it('évforduló', () => {
+    expect(dateFromNote('Lidl 12.30', '2027-01-01')?.date).toBe('2026-12-30');
+    expect(dateFromNote('Lidl 1.02', '2026-12-01')?.date).toBe('2027-01-02');
+  });
+  it('nem dátum', () => {
+    expect(dateFromNote('Lidl', '2026-09-01')).toBeNull();
+    expect(dateFromNote('1,5 kg alma', '2026-09-01')).toBeNull();
+    expect(dateFromNote('Aldi 13.04', '2026-09-01')).toBeNull();
+    expect(dateFromNote('Lidl 2.30', '2026-02-01')).toBeNull();
+    expect(dateFromNote('verzió 1.2.3', '2026-02-01')).toBeNull();
+  });
+  it('javaslatok és azonos összeg', () => {
+    const items = [
+      { id: 'a', kind: 'shared', date: '2026-09-01', amount: 500000, from: 'A', note: 'Lidl 9.04' },
+      { id: 'b', kind: 'shared', date: '2026-09-04', amount: 500000, from: 'B', note: 'Aldi 9.04' },
+      { id: 'c', kind: 'shared', date: '2026-09-01', amount: 120000, from: 'A', note: 'Spar 8.31' },
+    ] as Item[];
+    const f = findDateFixes(items);
+    expect(f.map((x) => [x.item.id, x.date, x.otherMonth])).toEqual([['c', '2026-08-31', true], ['a', '2026-09-04', false]]);
+    expect(sameAmountInMonth(items, '2026-09-20', 500000).map((i) => i.id)).toEqual(['a', 'b']);
+    expect(sameAmountInMonth(items, '2026-10-20', 500000)).toEqual([]);
+  });
+  it('lezárt hónapban a nap javítható, a hónap nem', () => {
+    const it0 = { id: 'x', kind: 'shared', date: '2026-09-01', amount: 100, from: 'A', note: 'Lidl 9.04', shareA: 5000 } as Item;
+    const ev = (e: object, i: number) => ({ id: 'e' + i, at: '2026-10-01T00:00:00Z', by: 'A', ...e }) as Event;
+    const log = [ev({ t: 'item.add', item: it0 }, 1), ev({ t: 'month.approve', month: '2026-09' }, 2), { ...ev({ t: 'month.approve', month: '2026-09' }, 3), by: 'B' } as Event];
+    const s = replay([...log, ev({ t: 'item.edit', item: { ...it0, date: '2026-09-04' } }, 4)]);
+    expect(s.items.get('x')?.date).toBe('2026-09-04');
+    const s2 = replay([...log, ev({ t: 'item.edit', item: { ...it0, date: '2026-10-04' } }, 5)]);
+    expect(s2.items.get('x')?.date).toBe('2026-09-01');
+    const s3 = replay([...log, ev({ t: 'item.edit', item: { ...it0, date: '2026-09-04', amount: 200 } }, 6)]);
+    expect(s3.items.get('x')?.amount).toBe(100);
+  });
+});

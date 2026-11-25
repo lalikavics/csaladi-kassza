@@ -2,7 +2,8 @@
   import { app } from '../lib/store.svelte';
   import { importWorkbook, type ImportResult } from '../lib/importSheet';
   import { CURRENCIES, money } from '../lib/format';
-  import { nextOccurrence, ruleItemFor, type Event } from '../lib/ledger';
+  import { apply, newId, nextOccurrence, replay, ruleItemFor, type Event } from '../lib/ledger';
+  import { findDateFixes, type DateFix } from '../lib/dateFromNote';
   import { sync } from '../lib/sync.svelte';
   import { today } from '../lib/format';
   import { leafLabel, categoryOf } from '../lib/categories';
@@ -14,6 +15,32 @@
   let backupMsg = $state('');
   let restoreText = $state('');
   let showLog = $state(false);
+  // dátum kiolvasása a megnevezésből (pl. „Lidl 9.04”)
+  let fixes = $state<DateFix[] | null>(null);
+  let fixSel = $state<Record<string, boolean>>({});
+  let fixMsg = $state('');
+  function scanDates() {
+    fixes = findDateFixes(app.state.items.values());
+    fixSel = Object.fromEntries(fixes.map((f) => [f.item.id, !f.otherMonth]));
+    fixMsg = fixes.length ? '' : hu ? 'Nincs olyan tétel, amelynek a nevében más dátum szerepel, mint a tétel dátuma.' : 'Nothing to fix.';
+    if (!fixes.length) fixes = null;
+  }
+  function applyDates() {
+    if (!fixes) return;
+    const probe = replay(app.log);
+    const at = new Date().toISOString();
+    const ok: Event[] = [];
+    let locked = 0;
+    for (const f of fixes) {
+      if (!fixSel[f.item.id]) continue;
+      const ev = { t: 'item.edit', id: newId(), at, by: app.settings.me, item: { ...f.item, date: f.date } } as Event;
+      if (apply(probe, ev)) ok.push(ev); else locked++;
+    }
+    if (ok.length) app.bulk(ok);
+    fixMsg = (hu ? `${ok.length} tétel dátuma javítva.` : `${ok.length} item date(s) fixed.`) + (locked ? (hu ? ` ${locked} tétel kimaradt, mert lezárt hónapba vagy hónapból kerülne át.` : ` ${locked} skipped (closed month).`) : '');
+    fixes = null;
+  }
+  const fixDate = (d: string) => d.slice(5).replace('-', '.') + '.';
   let confirmReset = $state(false);
   let pctA = $state(app.settings.shareA / 100);
 
@@ -118,6 +145,30 @@
     <span class="small">{hu ? 'Még nincs. Új tételnél jelöld be: „Ismétlődő, havonta”.' : 'None yet. Tick “Repeats monthly” on a new item.'}</span>
   {/each}
   {#if rules.length}<span class="small">{hu ? 'Módosítás: nyisd meg a tételt a Tételek között, és válaszd az „Ettől a hónaptól kezdve” lehetőséget.' : 'To change one, open it under Items and choose “From this month on”.'}</span>{/if}
+</div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:8px">
+  <h2>{hu ? 'Dátumok a tételek nevéből' : 'Dates from item names'}</h2>
+  <span class="small">{hu ? 'Ahol a tétel nevében dátum áll (pl. „Lidl 9.04”: hónap.nap), a tétel dátumát arra állítja. A név nem változik. Előtte megmutatja a listát, és kiválaszthatod, mit javítson.' : 'Where an item name contains a date (e.g. “Lidl 9.04”, month.day), sets the item date to it. Names stay as they are.'}</span>
+  {#if !fixes}
+    <button class="btn ghost" onclick={scanDates}>{hu ? 'Tételek átnézése' : 'Scan items'}</button>
+  {:else}
+    <div class="small"><b>{fixes.length}</b> {hu ? 'tételnél találtam dátumot. A más hónapba eső tételek nincsenek bejelölve: ezeknél a havi egyenleg is változna.' : 'items found. Items moving to another month are unticked.'}</div>
+    <div style="max-height:360px;overflow:auto;display:flex;flex-direction:column">
+      {#each fixes as f (f.item.id)}
+        <label class="row" style="padding:6px 0;gap:10px;cursor:pointer">
+          <input type="checkbox" bind:checked={fixSel[f.item.id]} style="width:20px;height:20px;flex:none" />
+          <span style="flex:1">{f.item.note} <span class="tip">· {fixDate(f.item.date)} → <b>{fixDate(f.date)}</b></span>{#if f.otherMonth} <span class="badge">{hu ? 'másik hónap' : 'other month'}</span>{/if}</span>
+          <span class="num">{money(f.item.amount, s.currency, app.lang)}</span>
+        </label>
+      {/each}
+    </div>
+    <div class="grid2">
+      <button class="btn" onclick={applyDates}>{hu ? `Javítás (${Object.values(fixSel).filter(Boolean).length})` : `Fix (${Object.values(fixSel).filter(Boolean).length})`}</button>
+      <button class="btn ghost" onclick={() => (fixes = null)}>{app.t('cancel')}</button>
+    </div>
+  {/if}
+  {#if fixMsg}<div class="ok" style="font-size:14px">{fixMsg}</div>{/if}
 </div>
 
 <div class="card" style="display:flex;flex-direction:column;gap:8px">

@@ -195,6 +195,12 @@ export function replay(log: Event[], today?: string): State {
   return s;
 }
 
+function sameExceptDate(a: Item, b: Item): boolean {
+  const ka = Object.keys(a).filter((k) => k !== 'date'), kb = Object.keys(b).filter((k) => k !== 'date');
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => JSON.stringify((a as unknown as Record<string, unknown>)[k]) === JSON.stringify((b as unknown as Record<string, unknown>)[k]));
+}
+
 export function apply(s: State, e: Event): boolean {
   const reject = (reason: string) => {
     s.rejected.push({ event: e, reason });
@@ -240,7 +246,9 @@ export function apply(s: State, e: Event): boolean {
     case 'item.edit': {
       const old = s.items.get(e.item.id);
       if (!old) return reject('ismeretlen tétel');
-      if (closed(old) || closed(e.item)) return reject('lezárt hónap');
+      // lezárt hónapban csak a nap javítható a hónapon belül (az egyenleget nem érinti)
+      const dayOnly = monthOf(old.date) === monthOf(e.item.date) && sameExceptDate(old, e.item);
+      if (!dayOnly && (closed(old) || closed(e.item))) return reject('lezárt hónap');
       s.items.set(e.item.id, e.item);
       break;
     }
