@@ -2,11 +2,12 @@
   import { app } from '../lib/store.svelte';
   import { convert, newId, type Freq, type Item, type Kind, type Person, type RulePatch } from '../lib/ledger';
   import { GROUPS, groupColor, groupOf, guessCategory, leafLabel, suggestions, type Suggestion } from '../lib/categories';
-  import { CURRENCIES, money, parseAmount, parseRate, today } from '../lib/format';
+  import { CURRENCIES, money, monthLabel, parseAmount, parseRate, shiftMonth, today } from '../lib/format';
+  import { itemsView } from '../lib/viewstate.svelte';
   import { normNote } from '../lib/ledger';
   import { sameAmountInMonth } from '../lib/dateFromNote';
 
-  let { edit = null, preset = null, done }: { edit?: Item | null; preset?: Kind | null; done: () => void } = $props();
+  let { edit = null, preset = null, month = null, done }: { edit?: Item | null; preset?: Kind | null; month?: string | null; done: () => void } = $props();
 
   const base = app.settings.currency;
   const src = edit;
@@ -18,7 +19,19 @@
   let pctA = $state((src?.shareA ?? app.settings.shareA) / 100);
   let showSplit = $state(!!src && (src.shareA ?? 5000) !== app.settings.shareA);
   let note = $state(src?.note ?? '');
-  let date = $state(src?.date ?? today());
+  // új tételnél: a Tételek lapon kiválasztott hónap; sorozatos bevitelnél az előző tétel napja
+  const startDate = () => {
+    const t = today(), m = month ?? t.slice(0, 7), last = itemsView.lastDate;
+    if (last && last.slice(0, 7) === m) return last;
+    return m === t.slice(0, 7) ? t : `${m}-01`;
+  };
+  let date = $state(src?.date ?? startDate());
+  const daysInMonth = (m: string) => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+  function stepMonth(n: number) {
+    const m = shiftMonth((date || today()).slice(0, 7), n);
+    const d = date || today();
+    date = `${m}-${String(Math.min(+d.slice(8, 10) || 1, daysInMonth(m))).padStart(2, '0')}`;
+  }
   let foreign = $state(!!src?.currency && src.currency !== base);
   let cur = $state(src?.currency && src.currency !== base ? src.currency : base === 'EUR' ? 'HUF' : 'EUR');
   const fmt = (m: number) => (m / 100).toLocaleString('hu-HU', { maximumFractionDigits: 2 }).replace(/ /g, ' ');
@@ -90,6 +103,8 @@
     else if (recurring) err = app.addRule(it);
     else err = app.addItem(it);
     if (err) { error = err.includes('lezárt') ? app.t('lockedMonth') : err; return; }
+    itemsView.month = date.slice(0, 7);
+    if (!src) itemsView.lastDate = date;
     done();
   }
   function remove(mode: 'item' | 'month' | 'stop') {
@@ -99,6 +114,17 @@
     done();
   }
 </script>
+
+{#if !occ}
+<div style="display:flex;flex-direction:column;gap:6px">
+  <span class="step">{hu ? 'Hónap' : 'Month'}</span>
+  <div class="monthbar">
+    <button class="iconbtn" aria-label={hu ? 'Előző hónap' : 'Previous month'} onclick={() => stepMonth(-1)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <b>{monthLabel((date || today()).slice(0, 7), app.lang)}{app.state.months.get((date || today()).slice(0, 7))?.closed ? ` · ${app.t('closed')}` : ''}</b>
+    <button class="iconbtn" aria-label={hu ? 'Következő hónap' : 'Next month'} onclick={() => stepMonth(1)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+</div>
+{/if}
 
 {#if !occ}
   <div class="grid2">

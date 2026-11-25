@@ -20,6 +20,8 @@
   let view = $state(read());
   let editing = $state<Item | null>(null);
   let preset = $state<Kind | null>(null);
+  // a Tételek lapon kiválasztott hónap: onnan nyitva az új tétel abba a hónapba kerül
+  let presetMonth = $state<string | null>(null);
   let formKey = $state(0);
   $effect(() => { document.documentElement.dataset.theme = app.themeResolved; });
   // a közös beállítások (nevek, pénznem) a naplóból jönnek
@@ -47,6 +49,7 @@
   window.addEventListener('hashchange', () => { view = read(); editing = null; window.scrollTo(0, 0); });
 
   function go(h: string) {
+    presetMonth = h === 'uj' && view === 'tetelek' && !itemsView.q ? itemsView.month : null;
     if (h === 'rendezes') { preset = 'settlement'; h = 'uj'; } else preset = null;
     editing = null; formKey++;
     location.hash = h === 'attekintes' ? '' : h;
@@ -91,7 +94,7 @@
       <Items {open} />
     {:else if view === 'uj'}
       <h1>{app.t('add')}</h1>
-      {#key formKey}<ItemForm {preset} {done} />{/key}
+      {#key formKey}<ItemForm {preset} month={presetMonth} {done} />{/key}
     {:else if view === 'kimutatas'}
       <Report />
     {:else if view === 'beallitasok'}

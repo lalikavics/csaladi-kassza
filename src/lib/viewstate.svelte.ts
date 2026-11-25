@@ -8,4 +8,6 @@ export const itemsView = $state({
   q: '',
   collapsed: {} as Record<string, boolean>,
   scroll: 0,
+  /** az utoljára felvett új tétel dátuma (sorozatos bevitelhez) */
+  lastDate: '',
 });
