@@ -65,7 +65,9 @@ export interface MonthState {
 }
 
 /** Közös beállítások, amelyek a két fél között szinkronizálódnak. */
-export interface Meta { nameA?: string; nameB?: string; currency?: string; shareA?: number }
+/** Saját alkategória: melyik főkategóriába tartozik, és (nem kötelező) mely szavakból ismerje fel. */
+export interface CustomCat { key: string; label: string; group: string; words?: string[] }
+export interface Meta { nameA?: string; nameB?: string; currency?: string; shareA?: number; cats?: CustomCat[] }
 
 export interface State {
   meta: Meta;

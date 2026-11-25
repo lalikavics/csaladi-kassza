@@ -1,7 +1,7 @@
 // Költéskategóriák két szinten: csoport (a grafikon színe) → alkategória.
 // Szín a csoport jelentéséhez illik (élelmiszer zöld, lakás kék, közlekedés sárga...), fix, sosem a helyezéstől függ.
 // A sorrend a halmozott oszlop sorrendje: így színvakoknak is elválnak a szomszédos sávok (validálva sötét és világos módban).
-import type { Item, State } from './ledger';
+import type { CustomCat, Item, State } from './ledger';
 import { normNote } from './ledger';
 
 export interface Leaf { key: string; hu: string; en: string; words: string[] }
@@ -45,6 +45,27 @@ for (const g of GROUPS) for (const l of g.leaves) { LEAF_GROUP.set(l.key, g); LE
 // régebbi, csoportszintű kulcsok (pl. 'subs', 'transport') a csoport „egyéb” tételeként élnek tovább
 for (const g of GROUPS) if (!LEAF.has(g.key)) { LEAF.set(g.key, { key: g.key, hu: `${g.hu} – egyéb`, en: `${g.en} – other`, words: [] }); LEAF_GROUP.set(g.key, g); }
 
+// saját alkategóriák (a közös beállításokból): a csoport végére kerülnek, a felismerés is figyelembe veszi őket
+let customKeys: string[] = [];
+let lastSig = '';
+const norm = (w: string) => w.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+export function registerCustom(cats: CustomCat[]) {
+  const sig = JSON.stringify(cats);
+  if (sig === lastSig) return;
+  lastSig = sig;
+  for (const g of GROUPS) g.leaves = g.leaves.filter((l) => !customKeys.includes(l.key));
+  for (const k of customKeys) { LEAF.delete(k); LEAF_GROUP.delete(k); }
+  customKeys = [];
+  for (const c of cats) {
+    const g = GROUP.get(c.group) ?? GROUP.get('other')!;
+    const leaf: Leaf = { key: c.key, hu: c.label, en: c.label, words: (c.words ?? []).map(norm).filter(Boolean) };
+    // a saját kulcsszó előbb érvényesüljön, mint a beépítettek: a csoport elejére kerül a keresésben
+    g.leaves = [...g.leaves, leaf];
+    LEAF.set(c.key, leaf); LEAF_GROUP.set(c.key, g); customKeys.push(c.key);
+  }
+}
+export const isCustom = (key: string) => customKeys.includes(key);
+
 export const groupOf = (leaf: string) => LEAF_GROUP.get(leaf) ?? GROUP.get('other')!;
 export const leafLabel = (leaf: string, lang: string) => { const l = LEAF.get(leaf) ?? LEAF.get('other')!; return lang === 'hu' ? l.hu : l.en; };
 export const groupLabel = (g: Group, lang: string) => (lang === 'hu' ? g.hu : g.en);
@@ -54,7 +75,8 @@ export function guessCategory(note: string): string {
   const n = note.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   if (!n.trim()) return 'other';
   const words = n.split(/[^a-z0-9-]+/).filter(Boolean);
-  for (const g of GROUPS) for (const l of g.leaves) for (const w of l.words) {
+  const ordered = [...GROUPS.flatMap((g) => g.leaves.filter((l) => customKeys.includes(l.key))), ...GROUPS.flatMap((g) => g.leaves.filter((l) => !customKeys.includes(l.key)))];
+  for (const l of ordered) for (const w of l.words) {
     if (w.startsWith('=')) { if (words.includes(w.slice(1))) return l.key; }
     else if (w.startsWith('^')) { if (words.some((x) => x.startsWith(w.slice(1)))) return l.key; }
     else if (n.includes(w)) return l.key;

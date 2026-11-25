@@ -69,6 +69,8 @@
   });
 
   const allSugg = $derived(suggestions(app.state));
+  // a saját kategóriák a közös beállításokból jönnek: az állapot frissülésével együtt olvassuk újra
+  const groups = $derived((app.state, GROUPS.map((g) => ({ ...g, leaves: [...g.leaves] }))));
   const sugg = $derived.by(() => {
     if (!isExpense || !noteFocus) return [] as Suggestion[];
     const q = normNote(note);
@@ -182,7 +184,7 @@
   <label class="f">{hu ? 'Kategória' : 'Category'}
     <select class="in" bind:value={catPicked}>
       <option value="">{hu ? 'Automatikus' : 'Automatic'}: {leafLabel(autoCat, app.lang)}</option>
-      {#each GROUPS as g}
+      {#each groups as g}
         <optgroup label={hu ? g.hu : g.en}>
           {#each g.leaves as l}<option value={l.key}>{hu ? l.hu : l.en}</option>{/each}
         </optgroup>

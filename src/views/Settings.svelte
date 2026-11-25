@@ -6,7 +6,8 @@
   import { findDateFixes, type DateFix } from '../lib/dateFromNote';
   import { sync } from '../lib/sync.svelte';
   import { today } from '../lib/format';
-  import { leafLabel, categoryOf } from '../lib/categories';
+  import { GROUPS, categoryOf, groupColor, leafLabel } from '../lib/categories';
+  import type { CustomCat } from '../lib/ledger';
 
   let res = $state<ImportResult | null>(null);
   let importing = $state(false);
@@ -39,6 +40,29 @@
     if (ok.length) app.bulk(ok);
     fixMsg = (hu ? `${ok.length} tétel dátuma javítva.` : `${ok.length} item date(s) fixed.`) + (locked ? (hu ? ` ${locked} tétel kimaradt, mert lezárt hónapba vagy hónapból kerülne át.` : ` ${locked} skipped (closed month).`) : '');
     fixes = null;
+  }
+  // saját alkategóriák (közös: a másik telefonon is megjelennek)
+  const cats = $derived(app.state.meta.cats ?? []);
+  let catName = $state(''), catGroup = $state('food'), catWords = $state(''), catEdit = $state<string | null>(null), catMsg = $state('');
+  const catUse = (k: string) => [...app.state.items.values()].filter((i) => !i.rule && categoryOf(i, app.state) === k).length;
+  function saveCat() {
+    const label = catName.trim();
+    if (!label) { catMsg = hu ? 'Adj nevet a kategóriának.' : 'Enter a name.'; return; }
+    if (cats.some((c) => c.key !== catEdit && c.label.toLowerCase() === label.toLowerCase())) { catMsg = hu ? 'Ilyen nevű kategória már van.' : 'Already exists.'; return; }
+    const words = catWords.split(',').map((w) => w.trim()).filter(Boolean);
+    const c: CustomCat = { key: catEdit ?? 'c_' + newId().slice(0, 8), label, group: catGroup, ...(words.length ? { words } : {}) };
+    const next = catEdit ? cats.map((x) => (x.key === catEdit ? c : x)) : [...cats, c];
+    app.emit({ t: 'meta.set', patch: { cats: next } } as Event);
+    catMsg = catEdit ? (hu ? 'Kategória módosítva.' : 'Updated.') : (hu ? `„${label}” hozzáadva.` : 'Added.');
+    catName = ''; catWords = ''; catEdit = null;
+  }
+  function editCat(c: CustomCat) { catEdit = c.key; catName = c.label; catGroup = c.group; catWords = (c.words ?? []).join(', '); catMsg = ''; }
+  function delCat(c: CustomCat) {
+    const n = catUse(c.key);
+    if (n && !confirm(hu ? `${n} tétel ebben a kategóriában van. Törlés után „Egyéb” lesz a kategóriájuk. Biztosan törlöd?` : `${n} items use it. Delete anyway?`)) return;
+    app.emit({ t: 'meta.set', patch: { cats: cats.filter((x) => x.key !== c.key) } } as Event);
+    if (catEdit === c.key) { catEdit = null; catName = ''; catWords = ''; }
+    catMsg = hu ? 'Kategória törölve.' : 'Deleted.';
   }
   const fixDate = (d: string) => d.slice(5).replace('-', '.') + '.';
   let confirmReset = $state(false);
@@ -145,6 +169,30 @@
     <span class="small">{hu ? 'Még nincs. Új tételnél jelöld be: „Ismétlődő, havonta”.' : 'None yet. Tick “Repeats monthly” on a new item.'}</span>
   {/each}
   {#if rules.length}<span class="small">{hu ? 'Módosítás: nyisd meg a tételt a Tételek között, és válaszd az „Ettől a hónaptól kezdve” lehetőséget.' : 'To change one, open it under Items and choose “From this month on”.'}</span>{/if}
+</div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:8px">
+  <h2>{hu ? 'Saját kategóriák' : 'Custom categories'}</h2>
+  <span class="small">{hu ? 'Új alkategória egy főkategórián belül. A kimutatásban a főkategória színével jelenik meg, és a másik telefonon is látszik.' : 'A new subcategory inside a main category. Shared with the other phone.'}</span>
+  {#each cats as c (c.key)}
+    {@const g = GROUPS.find((x) => x.key === c.group) ?? GROUPS[GROUPS.length - 1]}
+    <div class="row" style="gap:10px;padding:4px 0">
+      <span class="dot" style="background:{groupColor(g, app.themeResolved === 'dark')};flex:none"></span>
+      <span style="flex:1"><b style="font-weight:600">{c.label}</b> <span class="tip">· {hu ? g.hu : g.en}{c.words?.length ? ` · ${c.words.join(', ')}` : ''} · {catUse(c.key)} {hu ? 'tétel' : 'items'}</span></span>
+      <button class="btn ghost" style="min-height:36px;width:auto;padding:0 12px" onclick={() => editCat(c)}>{hu ? 'Szerkeszt' : 'Edit'}</button>
+      <button class="btn ghost" style="min-height:36px;width:auto;padding:0 12px" onclick={() => delCat(c)} aria-label={hu ? 'Törlés' : 'Delete'}>✕</button>
+    </div>
+  {/each}
+  <label class="f">{hu ? 'Név' : 'Name'}<input class="in" bind:value={catName} placeholder={hu ? 'pl. Kisállat, Ajándék, Gyógyszer' : 'e.g. Pets'} /></label>
+  <label class="f">{hu ? 'Melyik főkategóriába tartozzon?' : 'Main category'}
+    <select class="in" bind:value={catGroup}>{#each GROUPS as g}<option value={g.key}>{hu ? g.hu : g.en}</option>{/each}</select>
+  </label>
+  <label class="f">{hu ? 'Felismerő szavak (nem kötelező, vesszővel)' : 'Keywords (optional, comma separated)'}<input class="in" bind:value={catWords} placeholder={hu ? 'pl. zooplus, fressnapf' : 'e.g. zooplus'} /></label>
+  <div class="grid2">
+    <button class="btn" onclick={saveCat}>{catEdit ? (hu ? 'Mentés' : 'Save') : (hu ? 'Hozzáadás' : 'Add')}</button>
+    {#if catEdit}<button class="btn ghost" onclick={() => { catEdit = null; catName = ''; catWords = ''; }}>{app.t('cancel')}</button>{/if}
+  </div>
+  {#if catMsg}<div class="ok" style="font-size:14px">{catMsg}</div>{/if}
 </div>
 
 <div class="card" style="display:flex;flex-direction:column;gap:8px">

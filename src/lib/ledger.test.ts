@@ -184,3 +184,17 @@ describe('dátum a megnevezésből', () => {
     expect(s3.items.get('x')?.amount).toBe(100);
   });
 });
+
+import { registerCustom, guessCategory, groupOf, leafLabel } from './categories';
+describe('saját kategóriák', () => {
+  it('regisztrálás, felismerés, törlés', () => {
+    registerCustom([{ key: 'c_pet', label: 'Kisállat', group: 'shopping', words: ['Zooplus', 'fressnapf'] }]);
+    expect(leafLabel('c_pet', 'hu')).toBe('Kisállat');
+    expect(groupOf('c_pet').key).toBe('shopping');
+    expect(guessCategory('Zooplus rendelés')).toBe('c_pet');
+    expect(guessCategory('Lidl')).toBe('food');
+    registerCustom([]);
+    expect(groupOf('c_pet').key).toBe('other');
+    expect(guessCategory('Zooplus rendelés')).toBe('other');
+  });
+});

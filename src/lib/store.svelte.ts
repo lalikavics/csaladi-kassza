@@ -3,6 +3,7 @@
 import { apply, newId, replay, type Event, type Item, type Person, type RulePatch, type State } from './ledger';
 import { today } from './format';
 import { SHARED } from './config';
+import { registerCustom } from './categories';
 import type { Meta } from './ledger';
 import { detectLang, dicts, fill, type Lang } from './i18n';
 
@@ -49,7 +50,7 @@ class App {
   log = $state.raw<Event[]>(init.log);
   storageOk = $state(true);
 
-  state: State = $derived(replay(this.log, today()));
+  state: State = $derived.by(() => { const s = replay(this.log, today()); registerCustom(s.meta.cats ?? []); return s; });
 
   get themeResolved(): 'dark' | 'light' {
     if (this.settings.theme !== 'auto') return this.settings.theme;
