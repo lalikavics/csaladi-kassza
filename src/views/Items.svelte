@@ -54,7 +54,11 @@
 
 {#snippet badge(it: Item)}
   {#if it.kind === 'shared'}
-    <svg width="24" height="16" viewBox="0 0 24 16" role="img" aria-label={hu ? 'közös' : 'shared'}>{@render person(8, 'var(--muted)')}{@render person(16, 'var(--ink)')}</svg>
+    {@const sa = it.shareA ?? 5000}
+    <span style="display:inline-flex;align-items:center;gap:4px">
+      {#if sa !== 5000}<b class="split" title={`${app.name('A')} ${sa / 100}% · ${app.name('B')} ${100 - sa / 100}%`}>{initial('A')} {sa / 100}% · {initial('B')} {100 - sa / 100}%</b>{/if}
+      <svg width="24" height="16" viewBox="0 0 24 16" role="img" aria-label={hu ? 'közös' : 'shared'}>{@render person(8, 'var(--muted)')}{@render person(16, 'var(--ink)')}</svg>
+    </span>
   {:else if it.kind === 'individual'}
     <span style="display:inline-flex;align-items:center;gap:2px" aria-label={(hu ? 'egyéni: ' : 'personal: ') + app.name(it.from)}>
       <svg width="12" height="16" viewBox="1 0 12 16" aria-hidden="true">{@render person(6, 'var(--muted)')}</svg>
@@ -112,3 +116,7 @@
   {/each}
 {/if}
 </div>{/key}
+
+<style>
+  .split { font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+</style>
