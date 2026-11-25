@@ -2,7 +2,7 @@
   import { app } from '../lib/store.svelte';
   import { convert, newId, type Freq, type Item, type Kind, type Person, type RulePatch } from '../lib/ledger';
   import { GROUPS, groupColor, groupOf, guessCategory, leafLabel, suggestions, type Suggestion } from '../lib/categories';
-  import { CURRENCIES, money, monthLabel, parseAmount, parseRate, shiftMonth, today } from '../lib/format';
+  import { CURRENCIES, money, parseAmount, parseRate, shiftMonth, today } from '../lib/format';
   import { itemsView } from '../lib/viewstate.svelte';
   import { normNote } from '../lib/ledger';
   import { sameAmountInMonth } from '../lib/dateFromNote';
@@ -72,18 +72,24 @@
   const sugg = $derived.by(() => {
     if (!isExpense || !noteFocus) return [] as Suggestion[];
     const q = normNote(note);
-    const list = q ? [...allSugg.filter((x) => x.key.startsWith(q) && x.key !== q), ...allSugg.filter((x) => !x.key.startsWith(q) && x.key.includes(q))] : allSugg;
-    return list.slice(0, 6);
+    const list = q ? [...allSugg.filter((x) => x.key.startsWith(q)), ...allSugg.filter((x) => !x.key.startsWith(q) && x.key.includes(q))] : allSugg;
+    // ha már választottál kategóriát, az abba tartozók előre kerülnek (de a többi is látszik)
+    const ranked = catPicked ? [...list.filter((x) => x.category === catPicked), ...list.filter((x) => x.category !== catPicked)] : list;
+    return ranked.slice(0, 6);
   });
+  // a javaslat csak a nevet (és üres kategóriánál a kategóriát) tölti ki; a típust (közös/egyéni) soha nem írja át
   function pickSugg(x: Suggestion) {
     note = x.label;
-    catPicked = x.category;
-    if (!src && isExpense) kind = x.kind;
+    if (!catPicked) catPicked = x.category;
     noteFocus = false;
   }
+  const fullDate = (d: string) => new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString(app.lang === 'hu' ? 'hu-HU' : 'en-GB', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  let dateInput: HTMLInputElement | undefined = $state();
+  function openPicker() { try { dateInput?.showPicker(); } catch { dateInput?.focus(); } }
 
   function save(force = false) {
     if (!finalAmount || finalAmount <= 0) { error = hu ? 'Add meg az összeget.' : 'Enter an amount.'; return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { error = hu ? 'Válassz dátumot.' : 'Pick a date.'; return; }
     const amountChanged = !src || src.amount !== finalAmount || src.date.slice(0, 7) !== date.slice(0, 7);
     if (!force && amountChanged && !recurring && dupes.length) { dupAsked = dupKey; return; }
     const it: Item = {
@@ -117,10 +123,16 @@
 
 {#if !occ}
 <div style="display:flex;flex-direction:column;gap:6px">
-  <span class="step">{hu ? 'Hónap' : 'Month'}</span>
+  <span class="step">{hu ? 'Hónap és nap' : 'Month and day'}</span>
   <div class="monthbar">
     <button class="iconbtn" aria-label={hu ? 'Előző hónap' : 'Previous month'} onclick={() => stepMonth(-1)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <b>{monthLabel((date || today()).slice(0, 7), app.lang)}{app.state.months.get((date || today()).slice(0, 7))?.closed ? ` · ${app.t('closed')}` : ''}</b>
+    <span class="datepick">
+      <button class="datebtn" onclick={openPicker} aria-label={hu ? 'Dátum választása' : 'Pick date'}>
+        <b>{fullDate(date || today())}</b>
+        {#if app.state.months.get((date || today()).slice(0, 7))?.closed}<span class="tip">{app.t('closed')}</span>{/if}
+      </button>
+      <input bind:this={dateInput} class="dateover" type="date" bind:value={date} tabindex="-1" aria-hidden="true" />
+    </span>
     <button class="iconbtn" aria-label={hu ? 'Következő hónap' : 'Next month'} onclick={() => stepMonth(1)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
   </div>
 </div>
@@ -202,7 +214,6 @@
 {/if}
 
 {#if !occ}
-  <label class="f">{app.t('date')}<input class="in" type="date" bind:value={date} /></label>
 
   <div class="card" style="display:flex;flex-direction:column;gap:10px">
     {#if !src && !foreign}
@@ -275,6 +286,12 @@
 {/if}
 
 <style>
+  .datepick { position: relative; flex: 1; display: flex; justify-content: center; }
+  .datebtn { background: none; border: 0; color: var(--ink); font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; border-radius: 10px; }
+  .datebtn b { text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; }
+  /* iOS-en a natív dátumválasztó csak valódi koppintásra nyílik: az átlátszó mező a felirat fölött van */
+  .dateover { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+  @supports (-webkit-touch-callout: none) { .dateover { pointer-events: auto; } }
   .dupcard { display: flex; flex-direction: column; gap: 8px; border: 1.5px solid var(--warn-ink); background: var(--warn-bg); }
   .duphint { color: var(--warn-ink); }
 </style>
